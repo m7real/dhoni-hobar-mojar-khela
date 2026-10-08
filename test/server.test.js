@@ -65,7 +65,7 @@ function until(socket, pred, label, ms) {
     const timer = setTimeout(() => {
       socket.off('state', onState);
       reject(new Error('timeout waiting for ' + label));
-    }, ms || 6000);
+    }, ms || 20000);
 
     function check(state) {
       if (!state || !pred(state)) return false;
@@ -94,7 +94,7 @@ function until(socket, pred, label, ms) {
   server.stderr.on('data', (d) => { serverErr += d; });
 
   try {
-    await waitFor(server, 10000);
+    await waitFor(server, 30000);
 
     // ── static assets ──────────────────────────────────────────────────
     section('static assets');

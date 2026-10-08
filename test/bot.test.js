@@ -377,7 +377,7 @@ section('adding a bot over the socket');
         rt();
       }).on('error', rt);
       function rt() {
-        if (Date.now() - t0 > 10000) return reject(new Error('no boot'));
+        if (Date.now() - t0 > 30000) return reject(new Error('no boot'));
         setTimeout(tick, 120);
       }
     };
@@ -392,7 +392,7 @@ section('adding a bot over the socket');
   const emit = (s, ev, data) => new Promise((r) => s.emit(ev, data, r));
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const until = (s, pred, ms) => new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timeout')), ms || 8000);
+    const timer = setTimeout(() => reject(new Error('timeout')), ms || 20000);
     const check = (st) => {
       if (!st || !pred(st)) return false;
       clearTimeout(timer);

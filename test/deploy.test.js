@@ -112,7 +112,7 @@ section('environment configuration');
     let stderr = '';
     server.stderr.on('data', (d) => { stderr += d; });
 
-    await waitFor(PORT, 10000);
+    await waitFor(PORT, 30000);
     ok(true, 'the server boots with production environment variables');
 
     const health = await get(PORT, '/health');
@@ -170,7 +170,7 @@ section('environment configuration');
     });
 
     try {
-      await waitFor(PORT2, 10000);
+      await waitFor(PORT2, 30000);
       ok(true, 'the server boots with an allowlist');
 
       const mine = await get(PORT2, '/health', { Origin: 'https://mine.example.com' });

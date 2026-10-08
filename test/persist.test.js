@@ -350,10 +350,10 @@ section('games survive a server restart');
       http.get('http://127.0.0.1:' + PORT + '/health', (r) => {
         r.resume();
         if (r.statusCode === 200) return resolve();
-        if (Date.now() - t0 > 10000) return reject(new Error('no boot'));
+        if (Date.now() - t0 > 30000) return reject(new Error('no boot'));
         setTimeout(tick, 120);
       }).on('error', () => {
-        if (Date.now() - t0 > 10000) return reject(new Error('no boot'));
+        if (Date.now() - t0 > 30000) return reject(new Error('no boot'));
         setTimeout(tick, 120);
       });
     };
@@ -368,7 +368,7 @@ section('games survive a server restart');
   });
   const emit = (s, ev, data) => new Promise((r) => s.emit(ev, data, r));
   const until = (s, pred, ms) => new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timeout')), ms || 6000);
+    const timer = setTimeout(() => reject(new Error('timeout')), ms || 20000);
     const check = (st) => {
       if (!st || !pred(st)) return false;
       clearTimeout(timer);

@@ -1,0 +1,40 @@
+# Runs the test suite on every push and pull request.
+#
+# This is a regression net, not the deploy mechanism: Render builds and deploys
+# the app itself from this repository. The suite exists because the bot tests
+# play 200 full games, which is far too slow to eyeball but exactly the sort of
+# thing that breaks silently.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs so a busy branch does not pile up.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # Fail early if the lockfile and manifest ever drift apart.
+      - name: Verify the lockfile is in step with package.json
+        run: npm ci --ignore-scripts
+
+      - name: Test
+        run: npm test

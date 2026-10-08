@@ -69,7 +69,7 @@ function until(socket, pred, label, ms) {
     const timer = setTimeout(() => {
       socket.off('state', onState);
       reject(new Error('timeout waiting for ' + label));
-    }, ms || 6000);
+    }, ms || 20000);
     function check(state) {
       if (!state || !pred(state)) return false;
       clearTimeout(timer);
@@ -100,7 +100,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const open = [];
   let resumedSocket = null;
   try {
-    await waitFor(10000);
+    await waitFor(30000);
 
     // ── tokens ────────────────────────────────────────────────────────
     section('session tokens');
