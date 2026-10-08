@@ -43,11 +43,40 @@ function run(file) {
   });
 }
 
+// A shell test, skipped rather than failed when there is no usable bash.
+//
+// Bash is only reliably present on the Linux CI runner. On Windows it may come
+// from WSL, which can be absent or half-broken. A real failure always prints
+// the suite's own summary line, so the absence of that summary means bash never
+// got to run the test rather than the test failing.
+function runShell(file) {
+  return new Promise((resolve) => {
+    const child = spawn('bash', [path.join(__dirname, file)], {
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    let out = '';
+    child.stdout.on('data', (d) => { out += d; process.stdout.write(d); });
+    child.stderr.on('data', (d) => { out += d; process.stderr.write(d); });
+
+    child.on('error', (err) => {
+      resolve({ code: 0, output: '', skipped: true, reason: err.code || err.message });
+    });
+    child.on('close', (code) => {
+      if (!out.includes('passed:')) {
+        return resolve({ code: 0, output: '', skipped: true, reason: 'bash could not run the suite' });
+      }
+      resolve({ code: code, output: out });
+    });
+  });
+}
+
 (async function main() {
   let passedFiles = 0;
   let failedFiles = 0;
   let retriedFiles = 0;
   const failures = [];
+  const skipped = [];
 
   for (const file of FILES) {
     let result = await run(file);
@@ -78,12 +107,26 @@ function run(file) {
     }
   }
 
+  // The installer's own logic, which only runs where bash exists.
+  {
+    const res = await runShell('install-logic.test.sh');
+    if (res.skipped) {
+      skipped.push('install-logic.test.sh (no bash: ' + res.reason + ')');
+    } else if (res.code === 0) {
+      passedFiles++;
+    } else {
+      failedFiles++;
+      failures.push('install-logic.test.sh');
+    }
+  }
+
   console.log('\n' + '-'.repeat(60));
-  console.log('suites passed : ' + passedFiles + '/' + FILES.length);
+  console.log('suites passed : ' + passedFiles + '/' + (FILES.length + 1));
   if (retriedFiles) {
     console.log('harness retries : ' + retriedFiles +
       ' (a wait ran out, not an assertion)');
   }
+  skipped.forEach((s) => console.log('skipped      : ' + s));
   console.log('-'.repeat(60));
 
   if (failures.length) {
