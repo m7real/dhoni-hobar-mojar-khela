@@ -69,6 +69,8 @@ section('deployment files');
 
   ok(fs.existsSync(path.join(root, 'Dockerfile')), 'a Dockerfile is provided as an alternative');
   ok(fs.existsSync(path.join(root, '.gitignore')), 'there is a .gitignore');
+  ok(fs.existsSync(path.join(root, '.gitattributes')), 'there is a .gitattributes');
+  ok(fs.existsSync(path.join(root, '.gitattributes')), 'there is a .gitattributes');
 
   const ignore = fs.readFileSync(path.join(root, '.gitignore'), 'utf8');
   ok(/^node_modules\//m.test(ignore), 'node_modules is ignored');
@@ -91,6 +93,124 @@ section('deployment files');
 }
 
 // ---- the server honours PORT and the store location -----------------------
+
+// ---- the credit-free Linux deployment path --------------------------------
+
+section('the systemd unit');
+{
+  const root = path.join(__dirname, '..');
+  const unitPath = path.join(root, 'deploy', 'dhoni-hobar-mojar-khela.service');
+  ok(fs.existsSync(unitPath), 'the systemd unit exists');
+  const unit = fs.readFileSync(unitPath, 'utf8');
+
+  ok(/\[Unit\]/.test(unit) && /\[Service\]/.test(unit) && /\[Install\]/.test(unit),
+    'the unit has all three required sections');
+
+  // A game that only comes back by hand is a game that is down.
+  ok(/Restart=always/.test(unit), 'it restarts by itself after a crash');
+  ok(/RestartSec=\d+/.test(unit), 'there is a pause between restarts');
+  ok(/WantedBy=multi-user\.target/.test(unit), 'it starts on boot');
+
+  // Waiting for a real network, not merely for boot to finish.
+  ok(/After=network-online\.target/.test(unit), 'it waits for the network');
+
+  ok(/EnvironmentFile=\/etc\/dhoni-hobar-mojar-khela\.env/.test(unit),
+    'it reads the environment file');
+  ok(/^User=dhk/m.test(unit), 'it does not run as root');
+
+  // Only the saved-games directory should be writable.
+  ok(/ProtectSystem=strict/.test(unit), 'the filesystem is read-only');
+  ok(/ReadWritePaths=\/opt\/dhoni-hobar-mojar-khela\/data/.test(unit),
+    'only the data directory is writable');
+  ok(/NoNewPrivileges=true/.test(unit), 'privileges cannot be escalated');
+
+  ok(/ExecStart=\/usr\/bin\/node server\/index\.js/.test(unit),
+    'it starts the server the same way npm does',
+    (unit.match(/ExecStart=.*/) || [])[0]);
+}
+
+section('the deployment files agree with each other');
+{
+  const root = path.join(__dirname, '..');
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const unit = fs.readFileSync(path.join(root, 'deploy', 'dhoni-hobar-mojar-khela.service'), 'utf8');
+  const script = fs.readFileSync(path.join(root, 'deploy', 'install.sh'), 'utf8');
+  const envExample = fs.readFileSync(
+    path.join(root, 'deploy', 'dhoni-hobar-mojar-khela.env.example'), 'utf8');
+
+  // If these drift apart, the service silently points at the wrong place.
+  ok(pkg.main === 'server/index.js', 'package.json main is the server');
+  ok(pkg.scripts.start === 'node server/index.js', 'npm start is the documented entry point');
+  ok(unit.includes('ExecStart=/usr/bin/node server/index.js'),
+    'the unit ExecStart matches npm start');
+  ok(unit.includes('WorkingDirectory=/opt/dhoni-hobar-mojar-khela'),
+    'the unit works where the installer puts the code');
+  ok(script.includes('APP_DIR=/opt/dhoni-hobar-mojar-khela'),
+    'the installer uses that same directory');
+  ok(unit.includes('ReadWritePaths=/opt/dhoni-hobar-mojar-khela/data'),
+    'the writable path sits inside the install directory');
+  ok(/^STORE_DIR=\/opt\/dhoni-hobar-mojar-khela\/data\/rooms$/m.test(envExample),
+    'the config template stores games inside that writable path');
+
+  // Updating must not clobber a configured instance.
+  ok(/if \[ -f "\$\{ENV_FILE\}" \]/.test(script),
+    'the installer keeps an existing configuration file');
+  ok(/git -C "\$\{APP_DIR\}" pull --quiet --ff-only/.test(script),
+    'updating pulls rather than force-resetting');
+  ok(/npm ci --omit=dev/.test(script), 'it installs production dependencies only');
+  ok(/systemctl enable/.test(script) && /systemctl restart/.test(script),
+    'it enables and starts the service');
+  ok(/health/.test(script), 'it verifies the game actually answers');
+  ok(/set -euo pipefail/.test(script), 'the installer fails loudly rather than limping on');
+  ok(/id -u/.test(script), 'the installer insists on being run as root');
+
+  ['PORT', 'NODE_ENV', 'STORE_DIR', 'ALLOWED_ORIGIN', 'MAX_ROUNDS', 'RESUME_GRACE_MS']
+    .forEach(function (key) {
+      ok(new RegExp('^' + key + '=', 'm').test(envExample),
+        'the config template sets ' + key);
+    });
+  ok(/REPLACE-ME/.test(envExample),
+    'the config template makes the placeholder obvious');
+}
+
+section('shell scripts keep Unix line endings');
+{
+  const root = path.join(__dirname, '..');
+
+  // A stray carriage return makes bash fail with "bad interpreter".
+  const script = fs.readFileSync(path.join(root, 'deploy', 'install.sh'));
+  ok(script.indexOf(13) === -1, 'install.sh has no carriage returns');
+
+  const unit = fs.readFileSync(path.join(root, 'deploy', 'dhoni-hobar-mojar-khela.service'));
+  ok(unit.indexOf(13) === -1, 'the systemd unit has no carriage returns');
+
+  const attrs = fs.readFileSync(path.join(root, '.gitattributes'), 'utf8');
+  ok(/eol=lf/.test(attrs), '.gitattributes forces Unix line endings');
+  ok(/\*\.sh text eol=lf/.test(attrs), 'shell scripts are pinned to LF');
+}
+
+section('the guide states its warnings');
+{
+  const guide = fs.readFileSync(path.join(__dirname, '..', 'deploy', 'zendevz.md'), 'utf8');
+
+  // Someone should not have to deploy to find these out.
+  ok(/alpha/i.test(guide), 'the guide says Zendevz is alpha');
+  ok(/not built for production|isn't built for production/i.test(guide),
+    'the guide repeats the not-for-production warning');
+  ok(/sleep|sleeps|offline/i.test(guide), 'the guide mentions the sleep/offline caveat');
+  ok(/credit card/i.test(guide), 'the guide is explicit about not needing a card');
+
+  // The steps someone actually needs.
+  ok(/ALLOWED_ORIGIN/.test(guide), 'the guide covers setting ALLOWED_ORIGIN');
+  ok(/Elastic Edge/.test(guide), 'the guide covers Elastic Edge');
+  ok(/install\.sh/.test(guide), 'the guide links the installer');
+  ok(/journalctl/.test(guide), 'the guide explains how to read logs');
+  ok(/websocket|polling/i.test(guide), 'the guide explains the transport question');
+
+  const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
+  ok(/zendevz/i.test(readme), 'the README points at the Zendevz guide');
+  ok(/render\.yaml/.test(readme), 'the README still documents the Render path');
+}
 
 section('environment configuration');
 (async function configTests() {

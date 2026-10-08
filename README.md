@@ -113,29 +113,33 @@ rather than allowed to stop the server booting.
 
 ## Deploying
 
+**Free, no credit card — [Zendevz](deploy/zendevz.md).** A Bangladeshi
+card-free cloud: a real Linux VM with root, a free subdomain and SSL. One
+command installs the game, and it comes back by itself after a reboot.
+
 ```bash
-git push          # then in Render: New > Blueprint, point at the repo
+curl -fsSL https://raw.githubusercontent.com/m7real/dhoni-hobar-mojar-khela/main/deploy/install.sh | sudo bash
 ```
 
-`render.yaml` sets `npm ci`, `npm start`, a health check on `/health`, and a 1GB
-disk at `/var/data` with `STORE_DIR=/var/data/rooms`.
+Read [deploy/zendevz.md](deploy/zendevz.md) first — Zendevz is in alpha and says
+it is not built for production, and the game goes offline whenever your own
+machine sleeps if the VM lands there.
 
-Two things to know before you do:
+**Paid alternative — Render.** `render.yaml` deploys to
+[Render](https://render.com), which needs a credit card for the persistent
+disk. Nothing about the game is Zendevz-specific: it is plain Node.js on a
+Linux box with a writable directory, so either target works.
 
-- **It needs the Starter plan** (~$7/month). Persistent disks are not on the
-  free tier, and the free tier also spins the service down when idle, so saved
-  games would be lost constantly.
-- **Set `ALLOWED_ORIGIN`** to your own domain in the Render dashboard. Unset, it
-  accepts any origin, which is fine on a laptop and wrong on the internet.
+To deploy manually, it is four steps:
 
-A `Dockerfile` is included if you would rather host it yourself; mount a volume
-at `/data` so games survive.
+```bash
+npm ci --omit=dev
+NODE_ENV=production PORT=3000 STORE_DIR=./data/rooms npm start
+```
 
-### It runs as a single instance
-
-Rooms live in process memory, so this deploys as one server. Scaling out would
-need a Socket.IO Redis adapter and a shared game store — that is not set up here,
-and pretending otherwise would just be a slower way to lose games.
+Reverse-proxy it with anything that supports WebSocket upgrades (Caddy, nginx,
+or no proxy at all if your host opens ports directly), and set
+`ALLOWED_ORIGIN` to the address players will use.
 
 ---
 
@@ -184,6 +188,11 @@ client/public/
   js/audio.js  synthesised sound
   js/ui.js     HUD, panels, dialogs, toasts
   js/main.js   socket wiring
+deploy/
+  install.sh   idempotent installer and updater
+  dhoni-hobar-mojar-khela.service   systemd unit
+  dhoni-hobar-mojar-khela.env.example
+  zendevz.md   how to deploy without a credit card
 test/
   engine.test.js       rules, board shape, 60 full random games
   client.test.js       the real UI against real payloads, in jsdom

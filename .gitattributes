@@ -1,0 +1,19 @@
+# Text normalisation.
+#
+# The install script has to arrive on the server with Unix line endings. A
+# stray carriage return makes bash fail with "bad interpreter" or
+# "\r: command not found", which is a confusing way to lose an afternoon.
+* text=auto eol=lf
+
+*.sh text eol=lf
+*.service text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.env text eol=lf
+*.example text eol=lf
+Dockerfile text eol=lf
+
+# Binary assets.
+*.png binary
+*.jpg binary
+*.ico binary

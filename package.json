@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js",
-    "test": "node test/engine.test.js && node test/client.test.js && node test/trade.test.js && node test/bot.test.js && node test/server.test.js && node test/trade.socket.test.js && node test/reconnect.test.js && node test/persist.test.js && node test/deploy.test.js",
+    "test": "node test/run.js",
     "test:engine": "node test/engine.test.js",
     "test:client": "node test/client.test.js",
     "test:trade": "node test/trade.test.js",

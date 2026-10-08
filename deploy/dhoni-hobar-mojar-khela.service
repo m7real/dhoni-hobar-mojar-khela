@@ -1,0 +1,42 @@
+[Unit]
+Description=Dhoni Hobar Mojar Khela (multiplayer board game)
+Documentation=https://github.com/m7real/dhoni-hobar-mojar-khela
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dhk
+Group=dhk
+WorkingDirectory=/opt/dhoni-hobar-mojar-khela
+EnvironmentFile=/etc/dhoni-hobar-mojar-khela.env
+ExecStart=/usr/bin/node server/index.js
+
+# Keep playing through a crash, and come back by itself after a reboot.
+Restart=always
+RestartSec=3
+
+# The game only ever writes its saved games, so make everything else read-only.
+ProtectSystem=strict
+ReadWritePaths=/opt/dhoni-hobar-mojar-khela/data
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+
+# A small game does not need much memory, but leave headroom for the browser
+# side of long-polling bursts.
+MemoryMax=768M
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dhoni-hobar-mojar-khela
+
+[Install]
+WantedBy=multi-user.target
