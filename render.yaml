@@ -1,0 +1,44 @@
+# Render blueprint for Dhoni Hobar Mojar Khela.
+#
+# Note the plan: a persistent disk requires a paid plan. On the free tier
+# there is no disk, and the service also spins down when idle, so saved games
+# would be lost constantly. Use the Starter plan (or higher).
+
+services:
+  - type: web
+    name: dhoni-hobar-mojar-khela
+    runtime: node
+    plan: starter
+
+    buildCommand: npm ci
+    startCommand: npm start
+
+    healthCheckPath: /health
+
+    # Games in progress survive restarts and deploys.
+    disk:
+      name: game-data
+      mountPath: /var/data
+      sizeGB: 1
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Where saved games live, on the mounted disk.
+      - key: STORE_DIR
+        value: /var/data/rooms
+
+      # Your own domain, comma separated if you have more than one.
+      # Leave this out only while playing locally.
+      - key: ALLOWED_ORIGIN
+        sync: false
+
+      # A game cannot run forever once every title is sold, so it ends on a
+      # round limit with the richest player winning. Raise it for longer games.
+      - key: MAX_ROUNDS
+        value: "200"
+
+      # How long a dropped player has to reclaim their seat.
+      - key: RESUME_GRACE_MS
+        value: "60000"

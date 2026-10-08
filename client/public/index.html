@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>ধনি হবার মোজার খেলা · Dhoni Hobar Mojar Khela</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="./css/style.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎲</text></svg>" />
+</head>
+<body>
+
+<!-- ───────────────────────── LOBBY ───────────────────────── -->
+<section id="lobby" class="screen">
+  <div class="lobby-art">
+    <div class="die die-a">⚄</div>
+    <div class="die die-b">⚅</div>
+    <div class="tk">৳</div>
+  </div>
+
+  <div class="lobby-card">
+    <h1>ধনি হবার মোজার <span>খেলা</span></h1>
+    <p class="tagline">Dhoni Hobar Mojar Khela · বাংলাদেশি মনোপলি</p>
+
+    <label class="field">
+      <span>আপনার নাম</span>
+      <input id="nameInput" maxlength="18" placeholder="যেমন: রিয়া" autocomplete="off" />
+    </label>
+
+    <div class="lobby-actions">
+      <button id="btnCreate" class="btn btn-primary">নতুন খেলা খুলুন</button>
+      <div class="or">অথবা</div>
+      <div class="join-row">
+        <input id="codeInput" maxlength="4" placeholder="রুম কোড" autocomplete="off" spellcheck="false" />
+        <button id="btnJoin" class="btn btn-ghost">যোগ দিন</button>
+      </div>
+    </div>
+
+    <div class="lobby-waiting">
+      <h3>অপেক্ষমাণ খেলার ঘর</h3>
+      <ul id="roomList" class="room-list"><li class="muted">এখন কোনো খালি ঘর নেই।</li></ul>
+    </div>
+
+    <details class="rules">
+      <summary>খেলার নিয়ম</summary>
+      <ul>
+        <li>২ থেকে ৪ জন খেলোয়াড় একসাথে খেলেন। প্রত্যেকের শুরুর টাকা ৳১৫০০।</li>
+        <li>ডাইস ফেলে সামনে পর্যন্ত এগান, খালি জমি কিনতে চাইলে "কিনুন" চাপুন।</li>
+        <li>নিজের সব জমির মালিক হলে ওগুলোতে বাড়ি বা হোটেল বানাতে পারবেন।</li>
+        <li>টাকা চাইলে জমি বন্ধ (mortgage) করে মূল্যের অর্ধেক পাবেন।</li>
+        <li>শেষ বেঁচে থাকা খেলোয়াড়ই চ্যাম্পিয়ন।</li>
+      </ul>
+    </details>
+  </div>
+</section>
+
+<!-- ───────────────────────── GAME ───────────────────────── -->
+<section id="game" class="screen" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-bn">ধনি হবার মোজার খেলা</span>
+      <span class="brand-en">Dhoni Hobar Mojar Khela</span>
+    </div>
+    <div class="turn-banner" id="turnBanner">অপেক্ষা করছে…</div>
+    <div class="room-chip">
+      <span class="round-chip" title="রাউন্ড সীমা শেষ হলে সর্বাধিক সম্পদের খেলোয়াড় জিতবে">
+        রাউন্ড <b id="roundCount">০</b>/<span id="roundMax">২০০</span>
+      </span>
+      রুম <b id="roomCode">----</b>
+      <button id="btnCopy" class="btn-mini" title="রুম কোড কপি করুন">কপি</button>
+      <button id="btnSound" class="btn-mini" title="শব্দ বন্ধ বা চালু করুন" aria-pressed="true">🔊</button>
+      <button id="btnLeave" class="btn-mini danger" title="খেলা ছেড়ে দিন">বের হন</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <div class="stage" id="stage">
+      <canvas id="board"></canvas>
+      <div class="labels" id="labels"></div>
+      <div class="dice-hud" id="diceHud">
+        <div class="dice-hud-label">সর্বশেষ ডাইস</div>
+        <div class="dice-hud-values"><span id="diceA">–</span><span id="diceB">–</span></div>
+      </div>
+      <div class="stage-hint">ঘুরিয়ে দেখতে টেনে নিন · জুম করতে স্ক্রল করুন · জমির উপর ক্লিক করুন</div>
+      <button id="btnCamReset" class="btn-mini cam-reset" title="ক্যামেরা রিসেট">ক্যামেরা</button>
+    </div>
+
+    <aside class="side" id="side">
+      <div class="tabs">
+        <button class="tab is-active" data-tab="players">খেলোয়াড়</button>
+        <button class="tab" data-tab="props">জমি</button>
+        <button class="tab" data-tab="trade">ট্রেড<i class="tab-badge" id="tradeBadge" hidden>0</i></button>
+        <button class="tab" data-tab="log">খবর</button>
+        <button class="tab" data-tab="chat">চ্যাট</button>
+      </div>
+
+      <div class="tab-body is-active" data-panel="players">
+        <ul id="playersList" class="players"></ul>
+      </div>
+
+      <div class="tab-body" data-panel="props">
+        <div id="propsPanel" class="props"></div>
+      </div>
+
+      <div class="tab-body" data-panel="trade">
+        <div id="tradePanel" class="trade"></div>
+      </div>
+
+      <div class="tab-body" data-panel="log">
+        <ul id="logList" class="log"></ul>
+      </div>
+
+      <div class="tab-body" data-panel="chat">
+        <ul id="chatList" class="chat"></ul>
+        <form id="chatForm" class="chat-form">
+          <input id="chatInput" maxlength="160" placeholder="বার্তা লিখুন…" autocomplete="off" />
+          <button class="btn btn-mini" type="submit">পাঠান</button>
+        </form>
+      </div>
+
+      <div class="controls" id="controls"></div>
+    </aside>
+  </main>
+
+  <!-- shown while the socket is down or a dropped player is being waited on -->
+  <div id="netOverlay" class="net-overlay" hidden>
+    <div class="net-card">
+      <div class="net-spinner" aria-hidden="true"></div>
+      <h3 id="netTitle">সংযোগ পুনরায় স্থাপন হচ্ছে…</h3>
+      <p id="netBody">আপনার ট্রেনিংটি ফিরে আসছে। খেলাটি আপনার জন্য অপেক্ষা করছে।</p>
+      <div class="net-actions">
+        <button id="btnNetRetry" class="btn btn-primary">এখনই চেষ্টা করুন</button>
+        <button id="btnNetLeave" class="btn btn-ghost">খেলা ছেড়ে দিন</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── MODAL ───────────────────────── -->
+<div id="modal" class="modal" hidden>
+  <div class="modal-card" id="modalCard"></div>
+</div>
+
+<div id="toasts" class="toasts"></div>
+<div id="fxLayer" class="fx-layer" aria-hidden="true"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/vendor/three.min.js"></script>
+<script src="./js/audio.js"></script>
+<script src="./js/scene.js"></script>
+<script src="./js/ui.js"></script>
+<script src="./js/main.js"></script>
+</body>
+</html>

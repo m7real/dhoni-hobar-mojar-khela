@@ -1,0 +1,44 @@
+{
+  "name": "dhoni-hobar-mojar-khela",
+  "version": "1.0.0",
+  "description": "Dhoni Hobar Mojar Khela - a Bangladeshi multiplayer Monopoly clone with a light 3D board",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "test": "node test/engine.test.js && node test/client.test.js && node test/trade.test.js && node test/bot.test.js && node test/server.test.js && node test/trade.socket.test.js && node test/reconnect.test.js && node test/persist.test.js && node test/deploy.test.js",
+    "test:engine": "node test/engine.test.js",
+    "test:client": "node test/client.test.js",
+    "test:trade": "node test/trade.test.js",
+    "test:bot": "node test/bot.test.js",
+    "test:server": "node test/server.test.js",
+    "test:trade-socket": "node test/trade.socket.test.js",
+    "test:reconnect": "node test/reconnect.test.js",
+    "test:persist": "node test/persist.test.js",
+    "test:deploy": "node test/deploy.test.js"
+  },
+  "keywords": [
+    "monopoly",
+    "multiplayer",
+    "game",
+    "web",
+    "three.js",
+    "bangla",
+    "socket.io"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.4",
+    "three": "^0.128.0"
+  },
+  "devDependencies": {
+    "jsdom": "^28.1.0",
+    "socket.io-client": "^4.8.4"
+  }
+}
