@@ -771,7 +771,23 @@ const PORT = process.env.PORT || 3000;
     if (ALLOWED_ORIGINS.length) {
       log('[cors] limited to: ' + ALLOWED_ORIGINS.join(', '));
     }
-    if (!store.enabled) console.warn('[store] saving disabled — games are lost on restart');
+    if (!store.enabled) {
+      // In production this almost always means the disk is not attached, so
+      // say so loudly rather than letting games vanish without explanation.
+      const detail = store.lastError ? ' (' + store.lastError + ')' : '';
+      if (IS_PROD) {
+        console.error('');
+        console.error('=================================================');
+        console.error(' SAVING IS DISABLED' + detail);
+        console.error(' Games will be lost on every restart or deploy.');
+        console.error(' Check the disk is attached and that STORE_DIR');
+        console.error(' (' + STORE_DIR + ') points inside it.');
+        console.error('=================================================');
+        console.error('');
+      } else {
+        console.warn('[store] saving disabled' + detail + ' - games are lost on restart');
+      }
+    }
   });
 })();
 
