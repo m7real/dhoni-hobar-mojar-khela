@@ -212,6 +212,36 @@ section('the guide states its warnings');
   ok(/render\.yaml/.test(readme), 'the README still documents the Render path');
 }
 
+section('the Azure guide');
+{
+  const guide = fs.readFileSync(path.join(__dirname, '..', 'deploy', 'azure.md'), 'utf8');
+
+  // The three things that actually stop an Azure deployment working.
+  ok(/security group|NSG/i.test(guide), 'the guide covers the network security group');
+  ok(/Inbound port rules|Inbound security rules/i.test(guide),
+    'the guide says where to add the inbound rule');
+  ok(/auto-?shutdown/i.test(guide), 'the guide covers auto-shutdown');
+  ok(/[Dd]eallocate/.test(guide), 'the guide covers deallocate versus stop');
+
+  // Money, because this is a credit that runs out.
+  ok(/\$100/.test(guide), 'the guide mentions the student credit');
+  ok(/budget alert/i.test(guide), 'the guide recommends a budget alert');
+  ok(/disabled|decommissioned/i.test(guide),
+    'the guide says what happens when the credit runs out');
+
+  // Honesty about plain HTTP.
+  ok(/https?:\/\//.test(guide) && /no HTTPS|without a domain/i.test(guide),
+    'the guide is upfront about there being no HTTPS');
+
+  ok(/ssh /i.test(guide), 'the guide explains how to get in');
+  ok(/install\.sh/.test(guide), 'the guide links the installer');
+  ok(/ALLOWED_ORIGIN/.test(guide), 'the guide covers setting ALLOWED_ORIGIN');
+  ok(/journalctl/.test(guide), 'the guide explains how to read logs');
+
+  const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
+  ok(/azure/i.test(readme), 'the README points at the Azure guide');
+}
+
 section('environment configuration');
 (async function configTests() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dhk-cfg-'));

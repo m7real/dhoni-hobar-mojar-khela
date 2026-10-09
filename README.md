@@ -113,33 +113,32 @@ rather than allowed to stop the server booting.
 
 ## Deploying
 
-**Free, no credit card — [Zendevz](deploy/zendevz.md).** A Bangladeshi
-card-free cloud: a real Linux VM with root, a free subdomain and SSL. One
-command installs the game, and it comes back by itself after a reboot.
+**If you have an Azure student credit — [Azure](deploy/azure.md).** A real
+Ubuntu VM with a persistent disk, renewing every year while you are a student.
+This is the best option available here. Read the guide first: Azure blocks
+inbound traffic by default, and idle VMs quietly eat credit.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/m7real/dhoni-hobar-mojar-khela/main/deploy/install.sh | sudo bash
 ```
 
-Read [deploy/zendevz.md](deploy/zendevz.md) first — Zendevz is in alpha and says
-it is not built for production, and the game goes offline whenever your own
-machine sleeps if the VM lands there.
+**Free and no credit card — [Zendevz](deploy/zendevz.md).** A Bangladeshi
+card-free cloud giving a real VM with root and a free subdomain. But it is in
+alpha and says it is not for production, and the game goes offline whenever
+your own machine sleeps if the VM lands there.
 
 **Paid alternative — Render.** `render.yaml` deploys to
-[Render](https://render.com), which needs a credit card for the persistent
-disk. Nothing about the game is Zendevz-specific: it is plain Node.js on a
-Linux box with a writable directory, so either target works.
+[Render](https://render.com), which needs a credit card for the persistent disk.
 
-To deploy manually, it is four steps:
+Whichever you pick, the game itself is identical: plain Node.js on a Linux box
+with a writable directory, running under systemd. To deploy by hand:
 
 ```bash
 npm ci --omit=dev
 NODE_ENV=production PORT=3000 STORE_DIR=./data/rooms npm start
 ```
 
-Reverse-proxy it with anything that supports WebSocket upgrades (Caddy, nginx,
-or no proxy at all if your host opens ports directly), and set
-`ALLOWED_ORIGIN` to the address players will use.
+and set `ALLOWED_ORIGIN` to the address players will use.
 
 ---
 
@@ -192,6 +191,7 @@ deploy/
   install.sh   idempotent installer and updater
   dhoni-hobar-mojar-khela.service   systemd unit
   dhoni-hobar-mojar-khela.env.example
+  azure.md     how to deploy to an Azure VM
   zendevz.md   how to deploy without a credit card
 test/
   engine.test.js       rules, board shape, 60 full random games

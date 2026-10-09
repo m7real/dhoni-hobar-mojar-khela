@@ -131,6 +131,9 @@ fi
 
 echo
 echo "template sanity"
+
+echo
+echo "template sanity"
 if grep -q '^STORE_DIR=/opt/dhoni-hobar-mojar-khela/data/rooms' "${DEPLOY}/dhoni-hobar-mojar-khela.env.example"; then
   ok "STORE_DIR sits inside the unit's writable path"
 else
@@ -140,6 +143,23 @@ if grep -q 'ReadWritePaths=/opt/dhoni-hobar-mojar-khela/data' "${DEPLOY}/dhoni-h
   ok "the unit allows writing there"
 else
   bad "the unit allows writing there"
+fi
+
+# The port is read from the config file exactly once, before anything that
+# needs it. (The read and its fallback are two lines; the read is one.)
+PORT_READS=$(grep -c '^HEALTH_PORT=\$(grep' "${INSTALL_SH}")
+if [ "${PORT_READS}" = "1" ]; then
+  ok "the port is read from the config file exactly once"
+else
+  bad "the port is read from the config file exactly once" "found ${PORT_READS}"
+fi
+
+# A firewall on the machine itself would hide a working game behind a broken
+# one, so the installer should deal with it when ufw is active.
+if grep -q 'ufw allow' "${INSTALL_SH}"; then
+  ok "the installer opens the port in ufw when present"
+else
+  bad "the installer opens the port in ufw when present"
 fi
 
 echo

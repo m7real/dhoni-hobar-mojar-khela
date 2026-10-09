@@ -93,6 +93,12 @@ else
   warn "otherwise anyone can connect to your game."
 fi
 
+# Read the port out of the config file rather than assuming 3000, so anything
+# configured below (firewall, health check) follows the real setting. Grepping
+# is safer than sourcing, since this is a file we ship.
+HEALTH_PORT=$(grep -E '^PORT=' "${ENV_FILE}" 2>/dev/null | tail -n 1 | cut -d= -f2- | tr -d '"'"'"' \r' || true)
+HEALTH_PORT=${HEALTH_PORT:-3000}
+
 # ── 6. the service ──────────────────────────────────────────────────────────
 
 say "Installing the systemd service"
@@ -103,14 +109,23 @@ systemctl daemon-reload
 systemctl enable "${SERVICE_NAME}" >/dev/null 2>&1
 systemctl restart "${SERVICE_NAME}"
 
+# ── 6b. open the port in any local firewall ────────────────────────────────
+#
+# The cloud firewall (an Azure NSG, say) is configured in the portal, not
+# here. This only covers the firewall on the machine itself, which Ubuntu
+# server images sometimes ship enabled.
+
+if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q '^Status: active'; then
+  say "ufw is active, allowing the game port"
+  ufw allow "${HEALTH_PORT}/tcp" >/dev/null 2>&1 \
+    || warn "could not update ufw - check it by hand"
+else
+  say "No local firewall to configure"
+fi
+
 # ── 7. did it actually come up? ─────────────────────────────────────────────
 
-# Read the port out of the config file rather than sourcing it, and rather
-# than assuming 3000, so a customised PORT is checked on the port it really
-# uses. Otherwise the health check below silently tests the wrong thing.
-HEALTH_PORT=$(grep -E '^PORT=' "${ENV_FILE}" 2>/dev/null | tail -n 1 | cut -d= -f2- | tr -d '"'"'"' \r' || true)
-HEALTH_PORT=${HEALTH_PORT:-3000}
-
+# HEALTH_PORT was read from ${ENV_FILE} above.
 say "Waiting for the game to answer on port ${HEALTH_PORT}"
 up=0
 for _ in $(seq 1 30); do
@@ -131,23 +146,71 @@ fi
 echo
 curl -fsS "http://127.0.0.1:${HEALTH_PORT}/health"; echo
 
+# ── 8. what now ────────────────────────────────────────────────────────────
+
+# Saying the wrong next step is worse than saying nothing, so only guess when
+# there is a reliable marker.
+CLOUD=unknown
+if [ -f /var/lib/cloud/instance/plan ] || [ -d /var/lib/waagent ]; then
+  CLOUD=azure
+elif [ -r /sys/hypervisor/uuid ] && grep -qi '^ec2' /sys/hypervisor/uuid 2>/dev/null; then
+  CLOUD=aws
+elif grep -qi 'Google Compute Engine' /sys/class/dmi/id/product_name 2>/dev/null; then
+  CLOUD=gcp
+fi
+
+CLOUD_NOTES=""
+case "${CLOUD}" in
+  azure)
+    cat <<'AZ'
+
+  Azure only:
+   * The portal firewall still blocks inbound by default. Add an inbound
+     security rule for TCP ${HEALTH_PORT} or nobody can reach the game.
+       VM -> Networking -> Inbound port rules -> Add
+     Make the source "Any" so your friends can connect.
+   * Check the VM has no auto-shutdown scheduled. It would end games at a
+     fixed hour without warning.
+       VM -> Operations -> Auto-shutdown
+   * Stopping from inside Linux keeps billing. Use "Deallocate" in the portal.
+AZ
+    ;;
+  aws)
+    CLOUD_NOTES='
+  AWS only: open TCP '"${HEALTH_PORT}"' in the security group (EC2 console).
+            Prefer launching the game behind a load balancer with TLS.'
+    ;;
+  gcp)
+    CLOUD_NOTES='
+  GCP only: allow TCP '"${HEALTH_PORT}"' in your firewall rule (VPC console).'
+    ;;
+  *)
+    CLOUD_NOTES='
+  If a firewall is in front of this machine, open TCP '"${HEALTH_PORT}"' on it.'
+    ;;
+esac
+
+echo
 cat <<EOF
 
 $(say "Done. The game is running.")
 
-Next: expose it on the internet.
+Next: make it reachable from the internet.
 
-  1. In the Zendevz console, open Elastic Edge for this VM and forward
-     port ${HEALTH_PORT}.
-  2. You will get a subdomain like https://<your-vm>.zendevz.com
-     with SSL handled for you.
+  1. Find this machine's public address:
+
+$(hostname -I 2>/dev/null | awk '{print "       $1"}' || echo "       (run: hostname -I)")
+
+  2. Open that address on port ${HEALTH_PORT} in a browser. It should load.
+
   3. Put that address in ${ENV_FILE}:
 
-       ALLOWED_ORIGIN=https://<your-vm>.zendevz.com
+       ALLOWED_ORIGIN=http://<that-address>:${HEALTH_PORT}
 
      then:  sudo systemctl restart ${SERVICE_NAME}
 
-  4. Open the address in two browser windows and play a game together.
+  4. Play: open it in two windows and share the four-character room code.
+${CLOUD_NOTES}
 
 Useful commands:
   sudo systemctl status ${SERVICE_NAME}
